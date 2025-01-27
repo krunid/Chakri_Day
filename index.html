@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Game: วันจักรี</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .quiz-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+        .question {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        .options button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 5px;
+            background: #f0f0f0;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        .options button:hover {
+            background: #ddd;
+        }
+        .timer {
+            font-size: 1.5em;
+            margin: 10px 0;
+        }
+        .score {
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        .summary {
+            display: none;
+            margin-top: 20px;
+        }
+        .summary h2 {
+            margin-bottom: 10px;
+        }
+        .summary p {
+            margin: 5px 0;
+        }
+        .restart-button, .retry-button, .show-answer-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+        }
+        .restart-button:hover, .retry-button:hover, .show-answer-button:hover {
+            background: #45a049;
+        }
+        .input-name {
+            margin-bottom: 20px;
+        }
+        .input-name input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .instructions {
+            margin-bottom: 20px;
+            font-size: 1em;
+            color: #555;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-height: 80vh;
+            overflow-y: auto;
+            width: 90%;
+            max-width: 500px;
+        }
+        .popup-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        .leaderboard {
+            margin-top: 20px;
+        }
+        .leaderboard table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .leaderboard th, .leaderboard td {
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+        .leaderboard th {
+            background: #f0f0f0;
+        }
+        .answer-details {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .answer-details h3 {
+            margin-bottom: 10px;
+        }
+        .answer-details p {
+            margin: 5px 0;
+        }
+        .progress-bar {
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .progress-bar-fill {
+            height: 10px;
+            background: #4CAF50;
+            border-radius: 5px;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <h1>Quiz Game: วันจักรี 🎉</h1>
+        <div class="input-name">
+            <label for="player-name">กรุณากรอกชื่อของคุณ:</label>
+            <input type="text" id="player-name" placeholder="ชื่อของคุณ">
+            <button onclick="startGame()">เริ่มเกม</button>
+        </div>
+        <div class="instructions">
+            <p>คำแนะนำการเล่นเกม:</p>
+            <ul>
+                <li>คุณมีเวลา 1 นาทีในการตอบคำถามแต่ละข้อ</li>
+                <li>ตอบถูกได้ +1 คะแนน ตอบผิดได้ -1 คะแนน</li>
+                <li>เมื่อจบเกมจะแสดงสรุปผลคะแนนและคำตอบที่ถูกต้อง</li>
+                <li>กดปุ่ม "เริ่มเกมใหม่" เพื่อเล่นอีกครั้ง</li>
+            </ul>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+        <div class="question" id="question"></div>
+        <div class="options" id="options"></div>
+        <div class="timer" id="timer">เวลาเหลือ: 60 วินาที</div>
+        <div class="score" id="score">คะแนน: 0</div>
+        <div class="summary" id="summary">
+            <h2>สรุปผลคะแนน 🏆</h2>
+            <p id="final-score"></p>
+            <p id="correct-answers"></p>
+            <p id="wrong-answers"></p>
+            <p id="time-left"></p>
+            <button class="restart-button" onclick="restartGame()">เริ่มเกมใหม่</button>
+            <button class="retry-button" onclick="retryGame()">ทำซ้ำ</button>
+            <button class="show-answer-button" onclick="showAnswer()">เฉลย</button>
+        </div>
+        <div class="leaderboard" id="leaderboard">
+            <h2>อันดับผู้เล่น 🏅</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>อันดับ</th>
+                        <th>ชื่อ</th>
+                        <th>คะแนน</th>
+                        <th>เวลาที่เหลือ</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body"></tbody>
+            </table>
+        </div>
+        <div class="footer">
+            <p>จัดทำโดยครูนิด ศิษย์หลวงพ่อเสือ และลิขสิทธิ์โปรแกรม 2025</p>
+        </div>
+    </div>
+
+    <!-- Popup -->
+    <div class="popup-overlay" id="popup-overlay"></div>
+    <div class="popup" id="popup">
+        <p id="popup-message"></p>
+        <button onclick="closePopup()">ปิด</button>
+    </div>
+
+    <script>
+        let questions = [
+            {
+                question: "วันจักรีตรงกับวันที่เท่าไหร่?",
+                options: ["6 เมษายน", "5 เมษายน", "7 เมษายน", "8 เมษายน"],
+                answer: "6 เมษายน",
+                explanation: "วันจักรีเป็นวันที่ระลึกถึงการสถาปนาราชวงศ์จักรี"
+            },
+            {
+                question: "วันจักรีเป็นวันสำคัญเพื่อระลึกถึงอะไร?",
+                options: ["การสถาปนากรุงเทพฯ", "การสถาปนากรุงธนบุรี", "การสถาปนากรุงรัตนโกสินทร์", "การสถาปนากรุงศรีอยุธยา"],
+                answer: "การสถาปนากรุงรัตนโกสินทร์",
+                explanation: "วันจักรีเป็นวันที่ระลึกถึงการสถาปนากรุงรัตนโกสินทร์"
+            },
+            {
+                question: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงสถาปนากรุงรัตนโกสินทร์เมื่อปีใด?",
+                options: ["พ.ศ. 2325", "พ.ศ. 2326", "พ.ศ. 2327", "พ.ศ. 2328"],
+                answer: "พ.ศ. 2325",
+                explanation: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงสถาปนากรุงรัตนโกสินทร์ในปี พ.ศ. 2325"
+            },
+            {
+                question: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงเป็นพระมหากษัตริย์พระองค์ที่เท่าไหร่ของราชวงศ์จักรี?",
+                options: ["พระองค์ที่ 1", "พระองค์ที่ 2", "พระองค์ที่ 3", "พระองค์ที่ 4"],
+                answer: "พระองค์ที่ 1",
+                explanation: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงเป็นพระมหากษัตริย์พระองค์แรกของราชวงศ์จักรี"
+            },
+            {
+                question: "พระราชวังหลวงในกรุงรัตนโกสินทร์คืออะไร?",
+                options: ["พระบรมมหาราชวัง", "พระราชวังดุสิต", "พระราชวังบางปะอิน", "พระราชวังสนามจันทร์"],
+                answer: "พระบรมมหาราชวัง",
+                explanation: "พระบรมมหาราชวังเป็นพระราชวังหลวงในกรุงรัตนโกสินทร์"
+            },
+            {
+                question: "วันจักรีเป็นวันหยุดราชการหรือไม่?",
+                options: ["ใช่", "ไม่ใช่"],
+                answer: "ใช่",
+                explanation: "วันจักรีเป็นวันหยุดราชการ"
+            },
+            {
+                question: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงสร้างพระพุทธรูปองค์ใดเพื่อเป็นสิริมงคล?",
+                options: ["พระพุทธชินราช", "พระพุทธมหามณีรัตนปฏิมากร", "พระพุทธรูปปางมารวิชัย", "พระพุทธรูปปางสมาธิ"],
+                answer: "พระพุทธมหามณีรัตนปฏิมากร",
+                explanation: "พระพุทธมหามณีรัตนปฏิมากรเป็นพระพุทธรูปที่สร้างขึ้นเพื่อเป็นสิริมงคล"
+            },
+            {
+                question: "วันจักรีมีการจัดพิธีกรรมใดเป็นพิเศษ?",
+                options: ["การถวายเครื่องราชสักการะ", "การจุดพลุ", "การจัดงานเฉลิมฉลอง", "การจัดขบวนพาเหรด"],
+                answer: "การถวายเครื่องราชสักการะ",
+                explanation: "ในวันจักรีมีการถวายเครื่องราชสักการะเพื่อระลึกถึงพระมหากษัตริย์"
+            },
+            {
+                question: "ราชวงศ์จักรีปกครองประเทศไทยมานานกว่าเท่าไหร่?",
+                options: ["200 ปี", "300 ปี", "400 ปี", "500 ปี"],
+                answer: "200 ปี",
+                explanation: "ราชวงศ์จักรีปกครองประเทศไทยมานานกว่า 200 ปี"
+            },
+            {
+                question: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงมีพระนามเดิมว่าอะไร?",
+                options: ["ทองด้วง", "ทองดี", "ทองคำ", "ทองหล่อ"],
+                answer: "ทองด้วง",
+                explanation: "พระบาทสมเด็จพระพุทธยอดฟ้าจุฬาโลกมหาราชทรงมีพระนามเดิมว่าทองด้วง"
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timeLeft = 60;
+        let timer;
+        let playerName = '';
+        let leaderboard = [];
+        let selectedAnswers = [];
+
+        const questionElement = document.getElementById('question');
+        const optionsElement = document.getElementById('options');
+        const timerElement = document.getElementById('timer');
+        const scoreElement = document.getElementById('score');
+        const summaryElement = document.getElementById('summary');
+        const finalScoreElement = document.getElementById('final-score');
+        const correctAnswersElement = document.getElementById('correct-answers');
+        const wrongAnswersElement = document.getElementById('wrong-answers');
+        const timeLeftElement = document.getElementById('time-left');
+        const playerNameInput = document.getElementById('player-name');
+        const leaderboardBody = document.getElementById('leaderboard-body');
+        const progressBarFill = document.getElementById('progress-bar-fill');
+
+        function startGame() {
+            playerName = playerNameInput.value.trim();
+            if (playerName === '') {
+                showPopup('กรุณากรอกชื่อของคุณก่อนเริ่มเกม');
+                return;
+            }
+            currentQuestionIndex = 0;
+            score = 0;
+            timeLeft = 60;
+            selectedAnswers = [];
+            scoreElement.textContent = `คะแนน: ${score}`;
+            summaryElement.style.display = 'none';
+            document.querySelector('.input-name').style.display = 'none';
+            document.querySelector('.instructions').style.display = 'none';
+            shuffleQuestions();
+            updateProgressBar();
+            loadQuestion();
+            startTimer();
+        }
+
+        function shuffleQuestions() {
+            questions = questions.sort(() => Math.random() - 0.5);
+        }
+
+        function loadQuestion() {
+            const currentQuestion = questions[currentQuestionIndex];
+            questionElement.textContent = currentQuestion.question;
+            optionsElement.innerHTML = '';
+            currentQuestion.options.sort(() => Math.random() - 0.5).forEach(option => {
+                const button = document.createElement('button');
+                button.textContent = option;
+                button.onclick = () => {
+                    selectedAnswers[currentQuestionIndex] = option;
+                    checkAnswer(option);
+                };
+                optionsElement.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedOption) {
+            const currentQuestion = questions[currentQuestionIndex];
+            const isCorrect = selectedOption === currentQuestion.answer;
+            if (isCorrect) {
+                score += 1;
+            } else {
+                score -= 1;
+            }
+            scoreElement.textContent = `คะแนน: ${score}`;
+            nextQuestion();
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            updateProgressBar();
+            if (currentQuestionIndex < questions.length) {
+                loadQuestion();
+            } else {
+                endGame();
+            }
+        }
+
+        function updateProgressBar() {
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressBarFill.style.width = `${progress}%`;
+        }
+
+        function startTimer() {
+            timer = setInterval(() => {
+                timeLeft--;
+                timerElement.textContent = `เวลาเหลือ: ${timeLeft} วินาที`;
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            clearInterval(timer);
+            questionElement.textContent = 'เกมจบแล้ว!';
+            optionsElement.innerHTML = '';
+            timerElement.textContent = '';
+            summaryElement.style.display = 'block';
+            finalScoreElement.textContent = `ชื่อผู้เล่น: ${playerName} | คะแนนสุดท้าย: ${score}`;
+            correctAnswersElement.textContent = `คำตอบที่ถูกต้อง: ${score}`;
+            wrongAnswersElement.textContent = `คำตอบที่ผิด: ${questions.length - score}`;
+            timeLeftElement.textContent = `เวลาที่เหลือ: ${timeLeft} วินาที`;
+            updateLeaderboard();
+        }
+
+        function showAnswer() {
+            let answerDetails = '<div class="answer-details"><h3>เฉลยคำตอบทั้งหมด:</h3>';
+            questions.forEach((question, index) => {
+                const userAnswer = selectedAnswers[index];
+                const isCorrect = userAnswer === question.answer;
+                answerDetails += `
+                    <p><strong>คำถามที่ ${index + 1}:</strong> ${question.question}</p>
+                    <p class="${isCorrect ? 'correct' : 'incorrect'}">คำตอบที่คุณเลือก: ${userAnswer || 'ไม่ได้ตอบ'} ${isCorrect ? '✔' : '❌'}</p>
+                    <p>คำตอบที่ถูกต้อง: ${question.answer}</p>
+                    <p>คำอธิบาย: ${question.explanation}</p>
+                    <hr>
+                `;
+            });
+            answerDetails += '</div>';
+            showPopup(answerDetails);
+        }
+
+        function updateLeaderboard() {
+            leaderboard.push({ name: playerName, score: score, timeLeft: timeLeft });
+            leaderboard.sort((a, b) => b.score - a.score || b.timeLeft - a.timeLeft);
+            leaderboardBody.innerHTML = '';
+            leaderboard.slice(0, 5).forEach((entry, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${entry.name}</td>
+                    <td>${entry.score}</td>
+                    <td>${entry.timeLeft}</td>
+                `;
+                leaderboardBody.appendChild(row);
+            });
+        }
+
+        function restartGame() {
+            document.querySelector('.input-name').style.display = 'block';
+            document.querySelector('.instructions').style.display = 'block';
+            summaryElement.style.display = 'none';
+            playerNameInput.value = '';
+            startGame();
+        }
+
+        function retryGame() {
+            currentQuestionIndex = 0;
+            score = 0;
+            timeLeft = 60;
+            selectedAnswers = [];
+            scoreElement.textContent = `คะแนน: ${score}`;
+            summaryElement.style.display = 'none';
+            updateProgressBar();
+            loadQuestion();
+            startTimer();
+        }
+
+        function showPopup(message) {
+            document.getElementById('popup-message').innerHTML = message;
+            document.getElementById('popup-overlay').style.display = 'block';
+            document.getElementById('popup').style.display = 'block';
+        }
+
+        function closePopup() {
+            document.getElementById('popup-overlay').style.display = 'none';
+            document.getElementById('popup').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
